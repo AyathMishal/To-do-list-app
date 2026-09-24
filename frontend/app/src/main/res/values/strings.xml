@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">To-Do List</string>
+    <string name="today">Today</string>
+    <string name="add_new">Add New</string>
+    <string name="my_tasks">My Tasks</string>
+    <string name="choose_activity">Choose Activity</string>
+    <string name="create_task">Create Task</string>
+    <string name="login">Login</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="admin_dashboard">Admin Dashboard</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="username">Username</string>
+    <string name="role">Role</string>
+    <string name="name">Name</string>
+    <string name="task_description">Task Description...</string>
+    <string name="dont_have_account">Don\'t have an account? Sign Up</string>
+    <string name="already_have_account">Already have an account? Login</string>
+</resources>

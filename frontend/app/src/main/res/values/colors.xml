@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_primary">#9B5DE5</color>
+    <color name="purple_dark">#7209B7</color>
+    <color name="purple_light">#F3E8FF</color>
+    <color name="purple_tint">#FAF5FF</color>
+    <color name="purple_accent">#800080</color>
+    <color name="text_dark">#11121E</color>
+    <color name="text_gray">#4A4E69</color>
+    <color name="text_light_gray">#8D99AE</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="card_stroke">#D4C2F0</color>
+    <color name="divider_color">#E2D8F7</color>
+    <color name="red_delete">#E63946</color>
+</resources>

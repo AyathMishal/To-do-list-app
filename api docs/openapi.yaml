@@ -1,0 +1,805 @@
+openapi: 3.0.3
+
+info:
+  title: To-Do List API
+  description: REST API for Android To-Do List application
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+
+tags:
+  - name: Authentication
+  - name: Tasks
+  - name: Admin
+
+paths:
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get authenticated user
+
+      security:
+        - bearerAuth: []
+
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+
+  /tasks:
+    get:
+      tags:
+        - Tasks
+      summary: Get current user's tasks
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/TaskCategory'
+
+        - name: completed
+          in: query
+          required: false
+          schema:
+            type: boolean
+
+      responses:
+        '200':
+          description: Tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      tasks:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Task'
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+
+    post:
+      tags:
+        - Tasks
+      summary: Create a task
+
+      security:
+        - bearerAuth: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+
+  /tasks/{taskId}:
+
+    parameters:
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+
+    get:
+      tags:
+        - Tasks
+      summary: Get a single task
+
+      security:
+        - bearerAuth: []
+
+      responses:
+        '200':
+          description: Task retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+
+    put:
+      tags:
+        - Tasks
+      summary: Update a task
+
+      security:
+        - bearerAuth: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+
+    delete:
+      tags:
+        - Tasks
+      summary: Delete a task
+
+      security:
+        - bearerAuth: []
+
+      responses:
+        '204':
+          description: Task deleted successfully
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+
+  /tasks/{taskId}/complete:
+
+    patch:
+      tags:
+        - Tasks
+      summary: Update task completion status
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - is_completed
+              properties:
+                is_completed:
+                  type: boolean
+                  example: true
+
+      responses:
+        '200':
+          description: Task status updated
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+
+  /admin/users:
+
+    get:
+      tags:
+        - Admin
+      summary: Get all users
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+
+      responses:
+        '200':
+          description: Users retrieved
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+
+  /admin/users/{userId}:
+
+    get:
+      tags:
+        - Admin
+      summary: Get a specific user
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+
+      responses:
+        '200':
+          description: User retrieved
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+
+  /admin/users/{userId}/status:
+
+    patch:
+      tags:
+        - Admin
+      summary: Activate or deactivate a user
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - is_active
+              properties:
+                is_active:
+                  type: boolean
+                  example: false
+
+      responses:
+        '200':
+          description: User status updated
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+
+  /admin/users/{userId}/role:
+
+    patch:
+      tags:
+        - Admin
+      summary: Change user role
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+              properties:
+                role:
+                  $ref: '#/components/schemas/UserRole'
+
+      responses:
+        '200':
+          description: Role updated
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+
+  /admin/tasks:
+
+    get:
+      tags:
+        - Admin
+      summary: Get all tasks from all users
+
+      security:
+        - bearerAuth: []
+
+      parameters:
+
+        - name: user_id
+          in: query
+          schema:
+            type: integer
+            format: int64
+
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/TaskCategory'
+
+        - name: completed
+          in: query
+          schema:
+            type: boolean
+
+      responses:
+        '200':
+          description: All tasks retrieved
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+
+components:
+
+  securitySchemes:
+
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+
+  schemas:
+
+    UserRole:
+      type: string
+      enum:
+        - USER
+        - ADMIN
+
+
+    TaskCategory:
+      type: string
+      enum:
+        - IDEA
+        - FOOD
+        - WORK
+        - SPORT
+        - MUSIC
+
+
+    User:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int64
+          example: 1
+
+        full_name:
+          type: string
+          example: Mishal Ebna Mashud
+
+        email:
+          type: string
+          format: email
+          example: mishal@example.com
+
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+        is_active:
+          type: boolean
+          example: true
+
+        created_at:
+          type: string
+          format: date-time
+
+
+    Task:
+      type: object
+      properties:
+
+        task_id:
+          type: integer
+          format: int64
+          example: 15
+
+        user_id:
+          type: integer
+          format: int64
+          example: 1
+
+        title:
+          type: string
+          example: Complete Android project
+
+        description:
+          type: string
+          nullable: true
+          example: Finish REST API integration
+
+        category:
+          $ref: '#/components/schemas/TaskCategory'
+
+        is_completed:
+          type: boolean
+          example: false
+
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+
+        created_at:
+          type: string
+          format: date-time
+
+        updated_at:
+          type: string
+          format: date-time
+
+
+    RegisterRequest:
+      type: object
+      required:
+        - full_name
+        - email
+        - password
+      properties:
+
+        full_name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: Mishal Ebna Mashud
+
+        email:
+          type: string
+          format: email
+          example: mishal@example.com
+
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: MyPassword123
+
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+
+        email:
+          type: string
+          format: email
+          example: mishal@example.com
+
+        password:
+          type: string
+          format: password
+          example: MyPassword123
+
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+        - category
+      properties:
+
+        title:
+          type: string
+          maxLength: 200
+          example: Complete Android project
+
+        description:
+          type: string
+          nullable: true
+          example: Finish REST API integration
+
+        category:
+          $ref: '#/components/schemas/TaskCategory'
+
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-09-25T18:00:00Z
+
+
+    UpdateTaskRequest:
+      type: object
+      required:
+        - title
+        - category
+        - is_completed
+      properties:
+
+        title:
+          type: string
+          maxLength: 200
+          example: Complete Android REST API project
+
+        description:
+          type: string
+          nullable: true
+
+        category:
+          $ref: '#/components/schemas/TaskCategory'
+
+        is_completed:
+          type: boolean
+          example: true
+
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+
+
+    UserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+
+        message:
+          type: string
+          example: Account created successfully
+
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+
+
+    TaskResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+
+        message:
+          type: string
+          example: Task created successfully
+
+        data:
+          $ref: '#/components/schemas/Task'
+
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+
+        message:
+          type: string
+          example: Login successful
+
+        data:
+          type: object
+          properties:
+
+            token:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIs...
+
+            user:
+              $ref: '#/components/schemas/User'
+
+
+    Error:
+      type: object
+      properties:
+
+        success:
+          type: boolean
+          example: false
+
+        error:
+          type: object
+          properties:
+
+            code:
+              type: string
+              example: UNAUTHORIZED
+
+            message:
+              type: string
+              example: Authentication required
+
+
+  responses:
+
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+
+    Forbidden:
+      description: Admin access required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

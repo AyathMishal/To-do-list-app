@@ -1,0 +1,1054 @@
+-- =========================================================
+-- TO-DO LIST APPLICATION DATABASE
+-- PostgreSQL Database Schema
+-- =========================================================
+
+
+-- =========================================================
+-- 1. CREATE DATABASE
+-- =========================================================
+
+CREATE DATABASE todo_app;
+
+
+-- After creating the database, connect to "todo_app"
+-- in pgAdmin or PostgreSQL before running the remaining code.
+
+
+-- =========================================================
+-- 2. CREATE ENUM TYPES
+-- =========================================================
+
+CREATE TYPE user_role AS ENUM (
+    'USER',
+    'ADMIN'
+);
+
+CREATE TYPE task_category AS ENUM (
+    'IDEA',
+    'FOOD',
+    'WORK',
+    'SPORT',
+    'MUSIC'
+);
+
+
+-- =========================================================
+-- 3. USERS TABLE
+-- =========================================================
+
+CREATE TABLE users (
+    user_id BIGSERIAL PRIMARY KEY,
+
+    full_name VARCHAR(100) NOT NULL,
+
+    email VARCHAR(255) NOT NULL UNIQUE,
+
+    password_hash TEXT NOT NULL,
+
+    role user_role NOT NULL DEFAULT 'USER',
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- =========================================================
+-- 4. TASKS TABLE
+-- =========================================================
+
+CREATE TABLE tasks (
+    task_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+
+    title VARCHAR(200) NOT NULL,
+
+    description TEXT,
+
+    category task_category NOT NULL DEFAULT 'IDEA',
+
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+
+    due_date TIMESTAMPTZ,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_tasks_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE
+);
+
+
+-- =========================================================
+-- 5. INDEXES
+-- =========================================================
+
+CREATE INDEX idx_tasks_user_id
+ON tasks(user_id);
+
+CREATE INDEX idx_tasks_category
+ON tasks(category);
+
+CREATE INDEX idx_tasks_completed
+ON tasks(is_completed);
+
+CREATE INDEX idx_tasks_created_at
+ON tasks(created_at);
+
+CREATE INDEX idx_users_role
+ON users(role);
+
+
+-- =========================================================
+-- 6. AUTOMATIC UPDATED_AT FUNCTION
+-- =========================================================
+
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- =========================================================
+-- 7. USERS UPDATED_AT TRIGGER
+-- =========================================================
+
+CREATE TRIGGER users_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+
+-- =========================================================
+-- 8. TASKS UPDATED_AT TRIGGER
+-- =========================================================
+
+CREATE TRIGGER tasks_updated_at
+BEFORE UPDATE ON tasks
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+
+-- =========================================================
+-- 9. SAMPLE USERS
+-- =========================================================
+-- IMPORTANT:
+-- These password values are examples only.
+-- In the real application, Node.js should store
+-- bcrypt/Argon2 password hashes.
+
+
+INSERT INTO users (
+    full_name,
+    email,
+    password_hash,
+    role
+)
+VALUES
+(
+    'Admin User',
+    'admin@example.com',
+    '$2b$12$example_admin_password_hash',
+    'ADMIN'
+),
+(
+    'Mishal Ebna Mashud',
+    'mishal@example.com',
+    '$2b$12$example_user_password_hash',
+    'USER'
+);
+
+
+-- =========================================================
+-- 10. SAMPLE TASKS
+-- =========================================================
+
+INSERT INTO tasks (
+    user_id,
+    title,
+    description,
+    category,
+    is_completed,
+    due_date
+)
+VALUES
+(
+    2,
+    'Complete Android Project',
+    'Finish the Android To-Do application',
+    'WORK',
+    FALSE,
+    '2026-09-25 18:00:00+06'
+),
+(
+    2,
+    'Buy groceries',
+    'Buy food for the week',
+    'FOOD',
+    FALSE,
+    NULL
+),
+(
+    2,
+    'Football practice',
+    'Practice for two hours',
+    'SPORT',
+    TRUE,
+    NULL
+),
+(
+    2,
+    'New app idea',
+    'Research ideas for a new application',
+    'IDEA',
+    FALSE,
+    NULL
+),
+(
+    2,
+    'Listen to music',
+    'Create a new playlist',
+    'MUSIC',
+    FALSE,
+    NULL
+);
+
+
+-- =========================================================
+-- 11. CHECK USERS
+-- =========================================================
+
+SELECT
+    user_id,
+    full_name,
+    email,
+    role,
+    is_active,
+    created_at,
+    updated_at
+FROM users;
+
+
+-- =========================================================
+-- 12. CHECK TASKS
+-- =========================================================
+
+SELECT
+    task_id,
+    user_id,
+    title,
+    description,
+    category,
+    is_completed,
+    due_date,
+    created_at,
+    updated_at
+FROM tasks;
+
+
+-- =========================================================
+-- 13. CHECK USERS WITH THEIR TASKS
+-- =========================================================
+
+SELECT
+    u.user_id,
+    u.full_name,
+    u.email,
+    u.role,
+    t.task_id,
+    t.title,
+    t.category,
+    t.is_completed
+FROM users u
+LEFT JOIN tasks t
+    ON u.user_id = t.user_id
+ORDER BY u.user_id, t.task_id;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+===========================================================
+TO-DO LIST APPLICATION
+COMPLETE REST API SPECIFICATION
+===========================================================
+
+BASE URL
+http://localhost:3000/api/v1
+
+
+===========================================================
+AUTHENTICATION
+===========================================================
+
+1. REGISTER USER
+-----------------------------------------------------------
+
+POST /auth/register
+
+Headers:
+Content-Type: application/json
+
+Request Body:
+
+{
+    "full_name": "Mishal Ebna Mashud",
+    "email": "mishal@example.com",
+    "password": "MyPassword123"
+}
+
+Response: 201 Created
+
+{
+    "success": true,
+    "message": "Account created successfully",
+    "data": {
+        "user": {
+            "user_id": 1,
+            "full_name": "Mishal Ebna Mashud",
+            "email": "mishal@example.com",
+            "role": "USER",
+            "is_active": true,
+            "created_at": "2026-09-22T05:00:00Z"
+        }
+    }
+}
+
+
+===========================================================
+2. LOGIN
+===========================================================
+
+POST /auth/login
+
+Headers:
+Content-Type: application/json
+
+Request Body:
+
+{
+    "email": "mishal@example.com",
+    "password": "MyPassword123"
+}
+
+Response: 200 OK
+
+{
+    "success": true,
+    "message": "Login successful",
+    "data": {
+        "token": "JWT_TOKEN_HERE",
+        "user": {
+            "user_id": 1,
+            "full_name": "Mishal Ebna Mashud",
+            "email": "mishal@example.com",
+            "role": "USER",
+            "is_active": true
+        }
+    }
+}
+
+The Android application must use the returned token
+for protected API requests.
+
+Authorization Header:
+
+Authorization: Bearer JWT_TOKEN_HERE
+
+
+===========================================================
+3. GET CURRENT USER
+===========================================================
+
+GET /auth/me
+
+Headers:
+
+Authorization: Bearer JWT_TOKEN_HERE
+
+Response: 200 OK
+
+{
+    "success": true,
+    "data": {
+        "user_id": 1,
+        "full_name": "Mishal Ebna Mashud",
+        "email": "mishal@example.com",
+        "role": "USER",
+        "is_active": true
+    }
+}
+
+
+===========================================================
+TASK APIs
+===========================================================
+
+
+===========================================================
+4. GET MY TASKS
+===========================================================
+
+GET /tasks
+
+Headers:
+
+Authorization: Bearer JWT_TOKEN_HERE
+
+Response: 200 OK
+
+{
+    "success": true,
+    "data": {
+        "tasks": [
+            {
+                "task_id": 1,
+                "user_id": 1,
+                "title": "Complete Android Project",
+                "description": "Finish REST API integration",
+                "category": "WORK",
+                "is_completed": false,
+                "due_date": "2026-09-25T18:00:00Z",
+                "created_at": "2026-09-22T05:10:00Z",
+                "updated_at": "2026-09-22T05:10:00Z"
+            }
+        ]
+    }
+}
+
+
+===========================================================
+5. GET TASKS BY CATEGORY
+===========================================================
+
+GET /tasks?category=WORK
+
+Allowed categories:
+
+IDEA
+FOOD
+WORK
+SPORT
+MUSIC
+
+Example:
+
+GET /tasks?category=SPORT
+
+
+===========================================================
+6. GET COMPLETED TASKS
+===========================================================
+
+GET /tasks?completed=true
+
+Example response:
+
+{
+    "success": true,
+    "data": {
+        "tasks": [
+            {
+                "task_id": 5,
+                "user_id": 1,
+                "title": "Football Practice",
+                "description": "Practice for two hours",
+                "category": "SPORT",
+                "is_completed": true,
+                "due_date": null,
+                "created_at": "2026-09-22T05:10:00Z",
+                "updated_at": "2026-09-22T06:00:00Z"
+            }
+        ]
+    }
+}
+
+
+===========================================================
+7. GET INCOMPLETE TASKS
+===========================================================
+
+GET /tasks?completed=false
+
+
+===========================================================
+8. GET TASKS WITH MULTIPLE FILTERS
+===========================================================
+
+GET /tasks?category=WORK&completed=false
+
+
+===========================================================
+9. CREATE TASK
+===========================================================
+
+POST /tasks
+
+Headers:
+
+Authorization: Bearer JWT_TOKEN_HERE
+Content-Type: application/json
+
+Request Body:
+
+{
+    "title": "Complete Android Project",
+    "description": "Finish the REST API integration",
+    "category": "WORK",
+    "due_date": "2026-09-25T18:00:00Z"
+}
+
+Response: 201 Created
+
+{
+    "success": true,
+    "message": "Task created successfully",
+    "data": {
+        "task_id": 10,
+        "user_id": 1,
+        "title": "Complete Android Project",
+        "description": "Finish the REST API integration",
+        "category": "WORK",
+        "is_completed": false,
+        "due_date": "2026-09-25T18:00:00Z",
+        "created_at": "2026-09-22T05:10:00Z",
+        "updated_at": "2026-09-22T05:10:00Z"
+    }
+}
+
+IMPORTANT:
+
+Do NOT send user_id from Android.
+
+The backend gets user_id from the JWT.
+
+
+===========================================================
+10. GET SINGLE TASK
+===========================================================
+
+GET /tasks/10
+
+Headers:
+
+Authorization: Bearer JWT_TOKEN_HERE
+
+Response:
+
+{
+    "success": true,
+    "data": {
+        "task_id": 10,
+        "user_id": 1,
+        "title": "Complete Android Project",
+        "description": "Finish the REST API integration",
+        "category": "WORK",
+        "is_completed": false,
+        "due_date": "2026-09-25T18:00:00Z",
+        "created_at": "2026-09-22T05:10:00Z",
+        "updated_at": "2026-09-22T05:10:00Z"
+    }
+}
+
+
+===========================================================
+11. UPDATE TASK
+===========================================================
+
+PUT /tasks/10
+
+Headers:
+
+Authorization: Bearer JWT_TOKEN_HERE
+Content-Type: application/json
+
+Request Body:
+
+{
+    "title": "Complete Android REST API Project",
+    "description": "Finish authentication and task CRUD",
+    "category": "WORK",
+    "is_completed": true,
+    "due_date": "2026-09-26T18:00:00Z"
+}
+
+Response:
+
+{
+    "success": true,
+    "message": "Task updated successfully",
+    "data": {
+        "task_id": 10,
+        "user_id": 1,
+        "title": "Complete Android REST API Project",
+        "description": "Finish authentication and task CRUD",
+        "category": "WORK",
+        "is_completed": true,
+        "due_date": "2026-09-26T18:00:00Z",
+        "updated_at": "2026-09-22T06:00:00Z"
+    }
+}
+
+
+===========================================================
+12. MARK TASK COMPLETE
+===========================================================
+
+PATCH /tasks/10/complete
+
+Headers:
+
+Authorization: Bearer JWT_TOKEN_HERE
+Content-Type: application/json
+
+Request Body:
+
+{
+    "is_completed": true
+}
+
+Response:
+
+{
+    "success": true,
+    "message": "Task status updated",
+    "data": {
+        "task_id": 10,
+        "is_completed": true
+    }
+}
+
+
+===========================================================
+13. MARK TASK INCOMPLETE
+===========================================================
+
+PATCH /tasks/10/complete
+
+Headers:
+
+Authorization: Bearer JWT_TOKEN_HERE
+Content-Type: application/json
+
+Request Body:
+
+{
+    "is_completed": false
+}
+
+
+===========================================================
+14. DELETE TASK
+===========================================================
+
+DELETE /tasks/10
+
+Headers:
+
+Authorization: Bearer JWT_TOKEN_HERE
+
+Response:
+
+{
+    "success": true,
+    "message": "Task deleted successfully"
+}
+
+
+===========================================================
+ADMIN APIs
+===========================================================
+
+IMPORTANT:
+
+Every Admin API requires:
+
+Authorization: Bearer ADMIN_JWT_TOKEN
+
+The backend must verify:
+
+JWT is valid
+AND
+user.role = ADMIN
+
+
+===========================================================
+15. GET ALL USERS
+===========================================================
+
+GET /admin/users
+
+Headers:
+
+Authorization: Bearer ADMIN_JWT_TOKEN
+
+Response:
+
+{
+    "success": true,
+    "data": {
+        "users": [
+            {
+                "user_id": 1,
+                "full_name": "Mishal Ebna Mashud",
+                "email": "mishal@example.com",
+                "role": "USER",
+                "is_active": true,
+                "created_at": "2026-09-22T05:00:00Z"
+            },
+            {
+                "user_id": 2,
+                "full_name": "Admin User",
+                "email": "admin@example.com",
+                "role": "ADMIN",
+                "is_active": true,
+                "created_at": "2026-09-22T05:00:00Z"
+            }
+        ]
+    }
+}
+
+
+===========================================================
+16. GET SPECIFIC USER
+===========================================================
+
+GET /admin/users/1
+
+Headers:
+
+Authorization: Bearer ADMIN_JWT_TOKEN
+
+Response:
+
+{
+    "success": true,
+    "data": {
+        "user_id": 1,
+        "full_name": "Mishal Ebna Mashud",
+        "email": "mishal@example.com",
+        "role": "USER",
+        "is_active": true,
+        "created_at": "2026-09-22T05:00:00Z"
+    }
+}
+
+
+===========================================================
+17. DEACTIVATE USER
+===========================================================
+
+PATCH /admin/users/1/status
+
+Headers:
+
+Authorization: Bearer ADMIN_JWT_TOKEN
+Content-Type: application/json
+
+Request Body:
+
+{
+    "is_active": false
+}
+
+Response:
+
+{
+    "success": true,
+    "message": "User status updated successfully"
+}
+
+
+===========================================================
+18. ACTIVATE USER
+===========================================================
+
+PATCH /admin/users/1/status
+
+Headers:
+
+Authorization: Bearer ADMIN_JWT_TOKEN
+Content-Type: application/json
+
+Request Body:
+
+{
+    "is_active": true
+}
+
+
+===========================================================
+19. CHANGE USER TO ADMIN
+===========================================================
+
+PATCH /admin/users/1/role
+
+Headers:
+
+Authorization: Bearer ADMIN_JWT_TOKEN
+Content-Type: application/json
+
+Request Body:
+
+{
+    "role": "ADMIN"
+}
+
+Response:
+
+{
+    "success": true,
+    "message": "User role updated successfully"
+}
+
+
+===========================================================
+20. CHANGE ADMIN TO NORMAL USER
+===========================================================
+
+PATCH /admin/users/1/role
+
+Headers:
+
+Authorization: Bearer ADMIN_JWT_TOKEN
+Content-Type: application/json
+
+Request Body:
+
+{
+    "role": "USER"
+}
+
+
+===========================================================
+21. GET ALL GLOBAL TASKS
+===========================================================
+
+GET /admin/tasks
+
+Headers:
+
+Authorization: Bearer ADMIN_JWT_TOKEN
+
+Response:
+
+{
+    "success": true,
+    "data": {
+        "tasks": [
+            {
+                "task_id": 1,
+                "user_id": 1,
+                "title": "Complete Android Project",
+                "description": "Finish REST API integration",
+                "category": "WORK",
+                "is_completed": false,
+                "due_date": "2026-09-25T18:00:00Z",
+                "created_at": "2026-09-22T05:10:00Z",
+                "updated_at": "2026-09-22T05:10:00Z"
+            }
+        ]
+    }
+}
+
+
+===========================================================
+22. ADMIN FILTER TASKS BY USER
+===========================================================
+
+GET /admin/tasks?user_id=1
+
+
+===========================================================
+23. ADMIN FILTER TASKS BY CATEGORY
+===========================================================
+
+GET /admin/tasks?category=WORK
+
+
+===========================================================
+24. ADMIN FILTER COMPLETED TASKS
+===========================================================
+
+GET /admin/tasks?completed=true
+
+
+===========================================================
+25. ADMIN MULTIPLE FILTERS
+===========================================================
+
+GET /admin/tasks?user_id=1&category=WORK&completed=false
+
+
+===========================================================
+ERROR RESPONSES
+===========================================================
+
+
+400 BAD REQUEST
+-----------------------------------------------------------
+
+{
+    "success": false,
+    "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Invalid request data"
+    }
+}
+
+
+401 UNAUTHORIZED
+-----------------------------------------------------------
+
+{
+    "success": false,
+    "error": {
+        "code": "UNAUTHORIZED",
+        "message": "Authentication required"
+    }
+}
+
+
+403 FORBIDDEN
+-----------------------------------------------------------
+
+{
+    "success": false,
+    "error": {
+        "code": "FORBIDDEN",
+        "message": "Admin access required"
+    }
+}
+
+
+404 NOT FOUND
+-----------------------------------------------------------
+
+{
+    "success": false,
+    "error": {
+        "code": "NOT_FOUND",
+        "message": "Task not found"
+    }
+}
+
+
+409 CONFLICT
+-----------------------------------------------------------
+
+{
+    "success": false,
+    "error": {
+        "code": "EMAIL_ALREADY_EXISTS",
+        "message": "An account with this email already exists"
+    }
+}
+
+
+500 INTERNAL SERVER ERROR
+-----------------------------------------------------------
+
+{
+    "success": false,
+    "error": {
+        "code": "INTERNAL_SERVER_ERROR",
+        "message": "An unexpected error occurred"
+    }
+}
+
+
+===========================================================
+COMPLETE ENDPOINT LIST
+===========================================================
+
+AUTHENTICATION
+
+POST    /auth/register
+POST    /auth/login
+GET     /auth/me
+
+
+USER TASKS
+
+GET     /tasks
+POST    /tasks
+GET     /tasks/:taskId
+PUT     /tasks/:taskId
+PATCH   /tasks/:taskId/complete
+DELETE  /tasks/:taskId
+
+
+ADMIN
+
+GET     /admin/users
+GET     /admin/users/:userId
+PATCH   /admin/users/:userId/status
+PATCH   /admin/users/:userId/role
+GET     /admin/tasks
+
+
+===========================================================
+AUTHORIZATION MODEL
+===========================================================
+
+                    LOGIN
+                      |
+                      v
+                  JWT TOKEN
+                      |
+            +---------+---------+
+            |                   |
+          USER                ADMIN
+            |                   |
+            v                   v
+       /tasks APIs         /admin APIs
+            |                   |
+            v                   v
+       Own Tasks           All Users
+                          All Tasks
+
+
+===========================================================
+TASK CATEGORIES
+===========================================================
+
+IDEA
+FOOD
+WORK
+SPORT
+MUSIC
+
+
+===========================================================
+HTTP STATUS CODES
+===========================================================
+
+200 = Successful request
+201 = Resource created
+204 = Resource deleted successfully
+400 = Invalid request
+401 = Not authenticated
+403 = Not authorized
+404 = Resource not found
+409 = Conflict
+500 = Server error
